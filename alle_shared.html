@@ -1,0 +1,372 @@
+<title>산친구 캘린더</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+/* 컨셉: 귀여운 산 일러스트 + 큼직한 터치 칩. 모바일 우선, 하단 탭 3개 */
+:root{
+  --bg:#f8f4e6;--card:#fffdf6;--ink:#2f4232;--mute:#6f7f6b;--line:#e6e0c8;
+  --leaf:#5fae6e;--leaf-d:#3f8a52;--leaf-bg:#e3f3dc;
+  --sun:#c9741f;--sun-bg:#fdeccd;--rose:#cf5c49;--rose-bg:#fbe4de;--sky:#d6ecf5;
+  --shadow:0 3px 0 rgba(63,138,82,.15);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17211a;--card:#1f2c22;--ink:#e8f1e3;--mute:#9bb094;--line:#31443a;
+  --leaf:#7cc98a;--leaf-d:#9be0a7;--leaf-bg:#25402c;
+  --sun:#f6b970;--sun-bg:#43361f;--rose:#f0988a;--rose-bg:#43272a;--sky:#1d3340;
+  --shadow:0 3px 0 rgba(0,0,0,.25);color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17211a;--card:#1f2c22;--ink:#e8f1e3;--mute:#9bb094;--line:#31443a;
+  --leaf:#7cc98a;--leaf-d:#9be0a7;--leaf-bg:#25402c;
+  --sun:#f6b970;--sun-bg:#43361f;--rose:#f0988a;--rose-bg:#43272a;--sky:#1d3340;
+  --shadow:0 3px 0 rgba(0,0,0,.25);color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 "Jua",system-ui,"Malgun Gothic",sans-serif;padding-bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+.wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+.hero{background:linear-gradient(var(--sky),var(--bg));padding-top:14px}
+.hero svg{display:block;width:100%;height:auto;max-height:140px}
+.hero h1{font-size:24px;margin:0;font-weight:400;text-wrap:balance}
+.hero p{margin:2px 0 10px;color:var(--mute);font-size:13px}
+.status{font-size:12px;color:var(--mute);padding:8px 0;border-bottom:2px dashed var(--line)}
+
+.chip{border:2px solid var(--line);background:var(--card);padding:8px 14px;border-radius:999px;white-space:nowrap;box-shadow:var(--shadow);min-height:40px}
+.chip.on{background:var(--leaf);border-color:var(--leaf-d);color:#fff}
+.chip.vis{background:var(--rose-bg);border-color:var(--rose);color:var(--rose)}
+.chip.plain{box-shadow:none}
+.card{background:var(--card);border:2px solid var(--line);border-radius:22px;padding:16px;margin:14px 0;box-shadow:var(--shadow)}
+.card h2{font-size:17px;margin:0 0 10px;font-weight:400}
+.note{color:var(--mute);font-size:13px;margin:8px 0 0}
+.note a{color:var(--leaf-d)}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.empty{color:var(--mute);text-align:center;padding:14px 0}
+
+.mon h3{font-size:16px;margin:6px 0;font-weight:400}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin-bottom:12px}
+.dow{text-align:center;font-size:12px;color:var(--mute)}
+.cell{aspect-ratio:1/1.1;border-radius:14px;border:2px solid transparent;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0;font-size:14px;line-height:1.15}
+.cell i{font-style:normal;font-size:10px}
+.cell.nd{opacity:.35}
+.cell.ok{background:var(--leaf-bg);border-color:var(--leaf);color:var(--leaf-d);box-shadow:var(--shadow)}
+.cell.ok.sel{background:var(--leaf);color:#fff;border-color:var(--leaf-d)}
+.cell.free{background:var(--card);border-color:var(--line)}
+.cell.busy{background:var(--rose-bg);border-color:var(--rose);color:var(--rose)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--mute);font-size:12px;margin-bottom:6px}
+
+.day{background:var(--leaf-bg);border-radius:18px;padding:12px;margin-bottom:10px}
+.day h3{margin:0 0 8px;font-size:15px;font-weight:400;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tag{font-size:11px;background:var(--sun-bg);color:var(--sun);border-radius:999px;padding:1px 9px}
+.dep{font-size:12px;color:var(--mute);margin:8px 0 4px}
+.m{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--card);border-radius:14px;padding:8px 10px;margin-bottom:6px;border:1px solid var(--line)}
+.m span{flex:1;min-width:0;overflow-wrap:anywhere}
+.m button{border:0;background:var(--sun-bg);color:var(--sun);border-radius:999px;padding:6px 12px;font-size:12px;white-space:nowrap;min-height:34px}
+.switch{display:flex;align-items:center;gap:8px;margin-top:12px}
+.switch input{width:22px;height:22px;accent-color:var(--leaf)}
+.join{width:100%;margin-top:12px;font-size:16px;min-height:48px}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:2px solid var(--line);display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding:6px max(8px,env(safe-area-inset-right,0px)) calc(6px + env(safe-area-inset-bottom,0px)) max(8px,env(safe-area-inset-left,0px));z-index:10}
+.tabs button{border:0;background:none;border-radius:16px;padding:6px 0;display:flex;flex-direction:column;align-items:center;font-size:12px;color:var(--mute)}
+.tabs button span{font-size:22px;line-height:1.2}
+.tabs button.on{background:var(--leaf-bg);color:var(--leaf-d)}
+section{display:none}section.on{display:block}
+.pane{display:none}.pane.on{display:block}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--line);border-radius:999px;padding:5px;margin:14px 0 0}
+.seg button{border:0;background:transparent;border-radius:999px;padding:10px 0;min-height:44px;color:var(--mute)}
+.seg button.on{background:var(--card);color:var(--leaf-d);box-shadow:var(--shadow)}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20;max-width:90%;text-align:center}
+.toast.show{opacity:1}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+
+<div class="hero">
+  <div class="wrap">
+    <h1>⛰️ 산친구 캘린더</h1>
+    <p>각자 일정을 입력하면, 다 같이 갈 수 있는 날과 산이 모여요</p>
+  </div>
+  <svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <circle cx="330" cy="34" r="18" fill="#f4ac5b"/>
+    <path d="M-10 110 L70 30 Q80 20 90 30 L150 90 L170 110Z" fill="#8cc79a"/>
+    <path d="M70 30 Q80 20 90 30 L96 36 Q84 42 78 36 Q72 42 62 38Z" fill="#fff"/>
+    <path d="M110 110 L200 18 Q212 6 224 18 L310 110Z" fill="#5fae6e"/>
+    <path d="M200 18 Q212 6 224 18 L232 27 Q218 34 212 27 Q206 34 192 28Z" fill="#fff"/>
+    <path d="M250 110 L330 52 Q340 45 350 52 L420 110Z" fill="#7bbd88"/>
+    <g fill="#3f8a52"><path d="M30 110 l8 -22 l8 22z"/><path d="M52 110 l6 -16 l6 16z"/><path d="M345 110 l8 -22 l8 22z"/><path d="M366 110 l6 -16 l6 16z"/></g>
+  </svg>
+</div>
+
+<div class="wrap">
+<div class="status" id="status">연결 중…</div>
+
+<section id="tab-cal">
+  <div class="seg" id="seg">
+    <button data-sub="view">👀 함께 보기</button>
+    <button data-sub="edit">✏️ 내 일정 편집</button>
+  </div>
+
+  <div class="pane" id="pane-view">
+    <div class="card">
+      <h2>👥 함께 가는 사람</h2>
+      <div class="chips" id="people"></div>
+      <div id="joinbox"></div>
+    </div>
+    <div class="card">
+      <h2>🗓 다 같이 갈 수 있는 날</h2>
+      <div class="legend"><span>🟩 전원 가능 (⛰ 갈 수 있는 산 수)</span></div>
+      <div id="cal-group"></div>
+      <p class="note">출처: <a href="https://www.alle.co.kr/mb/content/schedule" target="_blank" rel="noopener">알레(alle.co.kr) 알레버스 4주일정</a>을 옮겼어요 (11/06~12/17, 2026-11-06 기준). 가격, 출발 시간, 마감 여부는 알레에서 꼭 확인하세요.</p>
+    </div>
+    <div class="card" id="detail"></div>
+  </div>
+
+  <div class="pane" id="pane-edit">
+    <div class="card">
+      <h2>🗓 나의 일정</h2>
+      <div class="legend"><span>○ 갈 수 있어요</span><span>✕ 바빠요 (눌러서 바꿔요)</span></div>
+      <div id="cal-edit"></div>
+      <p class="note" id="editnote"></p>
+    </div>
+  </div>
+</section>
+
+<section id="tab-list">
+  <div class="card">
+    <h2>🧭 찾는 조건</h2>
+    <div class="chips" id="deps"></div>
+    <label class="switch"><input type="checkbox" id="nomubak"> 무박은 빼주세요</label>
+  </div>
+  <div class="card"><h2>🥾 다 같이 갈 수 있는 산 <span class="tag" id="count"></span></h2><div id="list"></div><p class="note">출처: <a href="https://www.alle.co.kr/mb/content/schedule" target="_blank" rel="noopener">알레(alle.co.kr)</a>. 예약과 최신 정보는 알레에서 확인하세요.</p></div>
+</section>
+
+<section id="tab-vis">
+  <div class="card">
+    <h2>✅ 다녀온 산</h2>
+    <p class="note" style="margin:0 0 10px">누구든 다녀왔으면 목록에서 빠져요. 내가 다녀온 산만 눌러서 되돌릴 수 있어요.</p>
+    <div class="chips" id="visited"></div>
+  </div>
+</section>
+</div>
+
+<nav class="tabs" id="tabs">
+  <button data-tab="cal"><span>🗓</span>달력</button>
+  <button data-tab="list"><span>🥾</span>산 목록</button>
+  <button data-tab="vis"><span>✅</span>다녀온 산</button>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(function(){
+// ---- 알레 일정 샘플 ----
+const DATA={
+"11/06 (금)":{s:"예약 중",d:{사당:["[무박] 지리산 국립공원 (성삼재-반야봉-뱀사골)"],송내:["[무박] 영남알프스 (영축산-신불산-간월산)"]}},
+"11/07 (토)":{s:"예약 중",d:{사당:["[새벽출발] 월출산 국립공원","[새벽출발] 내장산 국립공원 (7봉종주)","[새벽출발] 설악산 국립공원 (오색-대청봉-소공원)","[새벽출발] 주왕산 국립공원 (주산지+절골-가메봉-용추협곡)","(알레1호) 내장산 국립공원","(알레2호) 내장산 국립공원","덕유산 국립공원 (안성-향적봉)","조계산 도립공원","(알레1호) 주왕산 국립공원","(알레2호) 주왕산 국립공원","무등산 국립공원","가야산 국립공원","선운산 도립공원","속리산 국립공원","월악산 국립공원"],송내:["내장산 국립공원","조계산 도립공원","월류봉 둘레길"],부산:["(알레1호) 내장산 국립공원","(알레2호) 내장산 국립공원","월출산 국립공원","조계산 도립공원","강천산","주왕산 국립공원"],대전:["내장산 국립공원","주왕산 국립공원"],광주:["주왕산 국립공원"]}},
+"11/08 (일)":{s:"예약 중",d:{사당:["[새벽출발] 내장산 국립공원 (7봉종주)","(알레1호) 내장산 국립공원","(알레2호) 내장산 국립공원","(알레1호) 주왕산 국립공원","(알레2호) 주왕산 국립공원","내변산 (변산반도 국립공원)","두타산 (베틀바위 산성길)","경주 남산 (경주국립공원)","대둔산 도립공원","청량산 도립공원"],송내:["주왕산 국립공원","내장산 국립공원"],부산:["(알레1호) 내장산 국립공원","(알레2호) 내장산 국립공원","청량산 도립공원","속리산 국립공원"],대전:["내장산 국립공원"],광주:["청량산 도립공원"]}},
+"11/10 (화)":{s:"예약 중",d:{사당:["주왕산 국립공원","내장산 국립공원"]}},
+"11/11 (수)":{s:"예약 중",d:{사당:["주왕산 국립공원","대둔산 도립공원","내장산 국립공원"]}},
+"11/12 (목)":{s:"예약 중",d:{사당:["[새벽출발] 내장산 국립공원 (7봉종주)","민둥산","(알레1호) 내장산 국립공원","(알레2호) 내장산 국립공원"]}},
+"11/13 (금)":{s:"예약 중",d:{사당:["[무박] 지리산 국립공원 (거림-천왕봉-중산리)","[무박] 남해 금산 (한려해상 국립공원) + 다랭이마을","[무박] 두륜산 도립공원"],대전:["[무박] 설악산 국립공원 (한계령-대청봉-오색)"],광주:["[무박] 사패산-도봉산 (북한산 국립공원)","[무박] 설악산 국립공원 (오색-대청봉-소공원)"]}},
+"11/14 (토)":{s:"예약 중",d:{사당:["[새벽출발] 설악산 국립공원 (오색-대청봉-소공원)","[새벽출발] 내장산 국립공원 (7봉종주)","주왕산 국립공원","(알레2호) 내장산 국립공원","(알레1호) 내장산 국립공원","민둥산","조계산 도립공원","지리산 바래봉","팔공산 국립공원","축령산 (치유의 숲)","소백산 국립공원","금수산 (월악산 국립공원)","팔봉산 (홍천)","마이산 도립공원","금오산 도립공원"],송내:["[새벽출발] 내장산 국립공원 (7봉종주)","내장산 국립공원","마이산 도립공원","가야산 국립공원"],부산:["내장산 국립공원","두륜산 도립공원","축령산 (치유의 숲)","마이산 도립공원","월류봉 둘레길"],대전:["내장산 국립공원","두륜산 도립공원","조계산 도립공원"],광주:["팔공산 국립공원","내연산 시립공원"]}},
+"11/15 (일)":{s:"예약 중",d:{사당:["[새벽출발] 내장산 국립공원 (7봉종주)","[새벽출발] 팔영산 (다도해 해상국립공원)","주왕산 국립공원","내장산 국립공원","마니산","월류봉 둘레길","운악산 (사라키바위 잔도길)","모악산 도립공원","옥순봉-구담봉+제비봉","구봉산","청량산 도립공원","대둔산 도립공원","경주 남산 (경주 국립공원)"],송내:["속리산 국립공원","금오산 도립공원"],부산:["내장산 국립공원","무등산 국립공원","천관산 도립공원"],대전:["내장산 국립공원","청량산 도립공원"],광주:["금정산 국립공원"]}},
+"11/17 (화)":{s:"예약 중",d:{사당:["내장산 국립공원","속리산 국립공원","주왕산 국립공원"]}},
+"11/18 (수)":{s:"예약 중",d:{사당:["내장산 국립공원","무등산 국립공원","내변산 (변산반도 국립공원)"]}},
+"11/19 (목)":{s:"예약 중",d:{사당:["내장산 국립공원","소백산 국립공원","경주 남산 (경주국립공원)"]}},
+"11/20 (금)":{s:"예약 중",d:{사당:["[무박] 천관산 도립공원","[무박] 지리산 국립공원 (백무동-천왕봉-중산리)","[무박] 영남알프스 (영축산-신불산-간월산)","[무박] 사량도 지리산"],송내:["[무박] 남해 금산 (한려해상 국립공원) + 다랭이마을"],광주:["[무박] 태백산 국립공원"]}},
+"11/21 (토)":{s:"예약 중",d:{사당:["[새벽출발] 달마산 (달마고도) + 땅끝마을","내장산 국립공원","응봉산","해파랑길35코스+바다부채길","경주 남산 (경주국립공원)","태안노을길","천태산","계룡산 국립공원","백덕산","월악산 국립공원","운장산","내변산 (변산반도 국립공원)","[무박] 남해 금산 (한려해상 국립공원) + 다랭이마을"],송내:["내변산 (변산반도 국립공원)","팔공산 국립공원","경주 남산 (경주국립공원)"],부산:["내장산 국립공원","월악산 국립공원","내변산 (변산반도 국립공원)","운장산","옥순봉-구담봉+제비봉","주왕산 국립공원"],대전:["소백산 국립공원","천관산 도립공원","월출산 국립공원"],광주:["남해 금산 (한려해상 국립공원)","경주 남산 (경주국립공원)"]}},
+"11/22 (일)":{s:"예약 중",d:{사당:["[새벽출발] 무등산 국립공원 (안양산-백마능선)","내장산 국립공원","해파랑길45코스","무등산 국립공원","호룡곡산+소무의도","선운산 도립공원","소백산 국립공원","고군산군도 (대장봉)","칠갑산","속리산 국립공원"],송내:["칠갑산","옥순봉-구담봉+제비봉"],부산:["내장산 국립공원","천태산","칠갑산","모악산"],대전:["경주 남산 (경주 국립공원)","운악산 (사라키바위 잔도길)"],광주:["금수산 (월악산 국립공원)"]}},
+"11/24 (화)":{s:"예약 중",d:{사당:["주왕산 국립공원","내변산 (변산반도 국립공원)"]}},
+"11/25 (수)":{s:"예약 중",d:{사당:["속리산 국립공원","금오산 도립공원"]}},
+"11/26 (목)":{s:"예약 중",d:{사당:["태백산 국립공원","소백산 국립공원"]}},
+"11/27 (금)":{s:"오픈 전",d:{사당:["[무박] 두륜산 도립공원","[무박] 지리산 국립공원 (백무동-천왕봉-중산리)","[무박] 거제 망산","[무박] 남해금산+다랭이마을","[무박] 태백산 국립공원"],송내:["[무박] 지리산 국립공원 (백무동-천왕봉-중산리)","[무박] 태백산 국립공원"],광주:["[무박] 태백산 국립공원"]}},
+"11/28 (토)":{s:"오픈 전",d:{사당:["[새벽출발] 월출산 국립공원","한탄강 물윗길","민주지산","해파랑길39코스","선자령","대둔산 도립공원","태백산 국립공원","지리산 바래봉","금수산","청량산 도립공원","가야산 국립공원","[무박] 팔영산 (다도해해상 국립공원)","장안산"],송내:["해파랑길35코스","소백산 국립공원","운악산 (사라키바위 잔도길)"],부산:["지리산 바래봉","태백산 국립공원","팔영산 (다도해해상 국립공원)","가야산 국립공원","고군산군도"],대전:["팔영산 (다도해해상 국립공원)","남해 금산 (한려해상 국립공원)","팔공산 국립공원"],광주:["민주지산","소백산 국립공원"]}},
+"11/29 (일)":{s:"오픈 전",d:{사당:["[새벽출발] 소백산 (죽령-비로봉-천동)","호룡곡산+소무의도","해파랑길45코스","선운산 도립공원","소백산 국립공원","고군산군도 (대장봉)","속리산 국립공원","칠갑산","무등산 국립공원"],송내:["칠갑산","옥순봉-구담봉+제비봉"],부산:["천태산","모악산","칠갑산"],대전:["경주 남산 (경주 국립공원)","운악산 (사라키바위 잔도길)"],광주:["금수산"]}},
+"12/01 (화)":{s:"오픈 전",d:{사당:["경주 남산 (경주 국립공원)","축령산 (치유의 숲)"]}},
+"12/02 (수)":{s:"오픈 전",d:{사당:["선자령","소백산 국립공원"]}},
+"12/03 (목)":{s:"오픈 전",d:{사당:["태백산 국립공원","지리산 바래봉"]}},
+"12/04 (금)":{s:"오픈 전",d:{사당:["[무박] 지리산 국립공원 (백무동-천왕봉-중산리)","[무박] 무등산 국립공원 (안양산-백마능선)","[무박] 영남알프스 (영축-신불-간월)","[무박] 금정산 + 해동용궁사","[무박] 천관산 도립공원"],송내:["[무박] 무등산 국립공원 (안양산-백마능선)"]}},
+"12/05 (토)":{s:"오픈 전",d:{사당:["백덕산","원대리 자작나무숲","속리산 국립공원","태백산 국립공원","팔공산 국립공원","소백산 국립공원","내변산 (변산반도 국립공원)","지리산 바래봉","선자령","칠갑산","경주 남산 (경주 국립공원)","월악산 국립공원","[무박] 남해 금산 + 다랭이마을","[무박] 영남알프스 (가지-운문)"],송내:["선자령","지리산 바래봉","민주지산"],부산:["태백산 국립공원","소백산 국립공원","선자령","민주지산","무등산 국립공원"],대전:["선자령","무등산 국립공원","축령산 (치유의 숲)"],광주:["태백산 국립공원","선자령"]}},
+"12/06 (일)":{s:"오픈 전",d:{사당:["민주지산","태백산 국립공원","지리산 바래봉","선자령","해파랑길45코스","모악산","계룡산 국립공원","산막이옛길","소백산 국립공원","옥순봉-구담봉+제비봉"],송내:["백덕산","축령산 (치유의 숲)"],부산:["지리산 바래봉","월출산 국립공원","남해 금산 (한려해상 국립공원)"],대전:["지리산 바래봉","소백산 국립공원"],광주:["청량산 도립공원"]}},
+"12/08 (화)":{s:"오픈 전",d:{사당:["지리산 바래봉","내변산 (변산반도 국립공원)"]}},
+"12/09 (수)":{s:"오픈 전",d:{사당:["태백산 국립공원","소백산 국립공원"]}},
+"12/10 (목)":{s:"오픈 전",d:{사당:["선자령","민주지산"]}},
+"12/11 (금)":{s:"오픈 전",d:{사당:["[무박] 지리산 국립공원 (백무동-천왕봉-중산리)","[무박] 두륜산 도립공원"]}},
+"12/12 (토)":{s:"오픈 전",d:{사당:["[새벽출발] 소백산 국립공원 (죽령-비로봉-천동)","[새벽출발] 팔공산 국립공원 (비로봉-갓바위 종주)","[새벽출발] 월출산 국립공원","소백산 국립공원","민주지산","가리산","가야산 국립공원","무등산 국립공원","대둔산 도립공원","장안산","지리산 바래봉","고군산군도","주왕산 국립공원","선자령","태백산 국립공원","[무박] 무등산 국립공원 (안양산-백마능선)","[무박] 영남알프스 (천황산-재약산)"],송내:["[새벽출발] 팔영산 (다도해 해상국립공원)","태백산 국립공원","소백산 국립공원","팔공산 국립공원"],부산:["태백산 국립공원","지리산 바래봉","선자령","주왕산 국립공원","내변산 (변산반도 국립공원)"],대전:["백덕산","태백산 국립공원","원대리 자작나무숲"],광주:["영남알프스 (영축-신불-간월재)","소백산 국립공원","월악산 국립공원"]}},
+"12/13 (일)":{s:"오픈 전",d:{사당:["태백산 국립공원","원대리 자작나무숲","선자령","백덕산","축령산 (치유의 숲)","해파랑길35코스 + 바다부채길","치악산 국립공원","지리산 바래봉","민둥산","소백산 국립공원"],송내:["모악산","내변산 (변산반도 국립공원)"],부산:["팔영산 (다도해해상 국립공원)","축령산 (치유의 숲)","고군산군도"],대전:["선자령","남해 금산 (한려해상 국립공원)"],광주:["주왕산 국립공원"]}},
+"12/15 (화)":{s:"오픈 전",d:{사당:["태백산 국립공원","지리산 바래봉"]}},
+"12/16 (수)":{s:"오픈 전",d:{사당:["선자령","덕유산 국립공원"]}},
+"12/17 (목)":{s:"오픈 전",d:{사당:["태백산 국립공원","계방산"]}}
+};
+const DEPS=["사당","송내","부산","대전","광주"];
+const MONTHS=[[11,30],[12,31]],DOW="일월화수목금토".split("");
+const KEY={};Object.keys(DATA).forEach(k=>{const p=k.split(" ")[0].split("/").map(Number);KEY[p[0]+"-"+p[1]]=k});
+
+// ---- 상태 ----
+const $=id=>document.getElementById(id);
+let db=null,user=null,uid=null,shared=false,isOwner=false,loaded=false,slow=false,connErr=false;
+let members={},names={};                    // 공유 데이터: id -> {busy,vis}, id -> 이름
+let mine={busy:new Set(),vis:new Set()};     // 내 데이터(편집 중 값)
+let touched=false,joined=false,dirty=false,inflight=false,timer=null;
+let tab="cal",sub="view",sel=null,nm=false;const dep=new Set(["사당"]);
+const LK="mtn-shared-local-v1";
+try{const s=JSON.parse(localStorage.getItem(LK)||"null");if(s){mine={busy:new Set(s.busy||[]),vis:new Set(s.vis||[])};touched=true}}catch(e){}
+
+const base=t=>t.replace(/\[[^\]]*\]\s*/g,"").replace(/\(.*?\)/g,"").split("+")[0].replace(/\s*(국립공원|도립공원|시립공원)\s*$/,"").trim();
+const nk=s=>s.replace(/\s/g,"");
+const vh=(p,b)=>{const k=nk(b);for(const v of p.vis)if(nk(v)===k)return true;return false};
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+let tt;function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");clearTimeout(tt);tt=setTimeout(()=>t.classList.remove("show"),2600)}
+
+function all(){
+  const o={};
+  Object.keys(members).forEach(id=>{const v=members[id]||{};o[id]={busy:new Set(v.busy||[]),vis:new Set(v.vis||[])}});
+  if(shared){if(joined||touched)o[uid]=mine}else if(touched)o.me=mine;
+  return o;
+}
+function nameOf(id){
+  if(!shared||id===uid)return "나";
+  if(names[id])return names[id];
+  const others=Object.keys(members).filter(x=>x!==uid).sort();
+  return "친구"+(others.indexOf(id)+1);
+}
+function avail(k,P){
+  const out=[];
+  DEPS.filter(x=>dep.has(x)&&DATA[k].d[x]).forEach(x=>{
+    const l=DATA[k].d[x].filter(t=>!(nm&&t.includes("[무박]"))&&!P.some(p=>vh(p,base(t))));
+    if(l.length)out.push([x,l]);
+  });
+  return out;
+}
+
+function calHTML(mode,P){
+  let h="";
+  MONTHS.forEach(([mo,last])=>{
+    h+=`<div class="mon"><h3>${mo}월</h3><div class="grid">`+DOW.map(d=>`<div class="dow">${d}</div>`).join("");
+    for(let i=0;i<new Date(2026,mo-1,1).getDay();i++)h+="<div></div>";
+    for(let d=1;d<=last;d++){
+      const k=KEY[mo+"-"+d];
+      if(!k){h+=`<div class="cell nd">${d}</div>`;continue}
+      if(mode==="edit"){
+        const b=mine.busy.has(k);
+        h+=`<button class="cell ${b?"busy":"free"}" data-busy="${k}" aria-label="${k} ${b?"바쁨":"가능"}">${d}<i>${b?"✕":"○"}</i></button>`;
+      }else{
+        const n=(P.length&&!P.some(p=>p.busy.has(k)))?avail(k,P).reduce((a,x)=>a+x[1].length,0):0;
+        h+=n?`<button class="cell ok${sel===k?" sel":""}" data-day="${k}">${d}<i>⛰ ${n}</i></button>`:`<div class="cell nd">${d}</div>`;
+      }
+    }
+    h+="</div></div>";
+  });
+  return h;
+}
+function dayHTML(k,P){
+  return avail(k,P).map(([x,l])=>`<div class="dep">📍 ${x} 출발</div>`+l.map(t=>`<div class="m"><span>${esc(t)}</span><button data-vis="${esc(base(t))}">다녀왔어요</button></div>`).join("")).join("");
+}
+
+function render(){
+  const O=all(),ids=Object.keys(O),P=ids.map(i=>O[i]);
+  // 상태줄
+  let st;
+  if(!shared)st="👤 이 기기에만 저장돼요 (공유 연결 안 됨)";
+  else if(connErr)st="⚠️ 공유 데이터에 연결하지 못했어요";
+  else if(!loaded)st=slow?"⏳ 연결이 늦어요. 지금 화면은 최신이 아닐 수 있어요":"연결 중…";
+  else st=`🟢 ${ids.length}명 참여 중 · 입력하면 모두에게 바로 보여요`;
+  $("status").textContent=st;
+  // 탭
+  document.querySelectorAll("section").forEach(s=>s.classList.toggle("on",s.id==="tab-"+tab));
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
+  $("pane-view").classList.toggle("on",sub==="view");
+  $("pane-edit").classList.toggle("on",sub==="edit");
+  document.querySelectorAll("#seg button").forEach(b=>b.classList.toggle("on",b.dataset.sub===sub));
+  // 사람들
+  $("people").innerHTML=ids.length?ids.map(id=>`<span class="chip on plain">${esc(nameOf(id))}</span>`+(shared&&isOwner&&id!==uid?`<button class="chip plain" data-kick="${esc(id)}" aria-label="${esc(nameOf(id))} 내보내기">✕</button>`:"")).join(""):'<span class="empty" style="padding:4px 0">아직 참여한 사람이 없어요</span>';
+  $("joinbox").innerHTML=(joined||touched)?"":`<button class="chip on join" data-join="1">🙋 나도 참여하기</button><p class="note">참여하면 내 일정이 친구들 화면에도 보여요.</p>`;
+  // 달력
+  $("cal-group").innerHTML=calHTML("group",P);
+  $("cal-edit").innerHTML=calHTML("edit",P);
+  $("editnote").textContent=shared?"바꾸면 자동으로 저장되고 친구들 화면에 반영돼요.":"로그인한 상태로 링크를 열면 친구와 함께 볼 수 있어요.";
+  const blockedSel=sel&&(P.some(p=>p.busy.has(sel))||!avail(sel,P).length);
+  if(blockedSel)sel=null;
+  $("detail").innerHTML=sel?`<h2>⛰️ ${sel}</h2>${dayHTML(sel,P)}`:`<div class="empty">🌲 초록색 날짜를 누르면<br>그날 갈 수 있는 산이 나와요</div>`;
+  // 산 목록
+  $("deps").innerHTML=DEPS.map(x=>`<button class="chip${dep.has(x)?" on":""}" data-dep="${x}">${x}</button>`).join("");
+  $("nomubak").checked=nm;
+  let n=0,h="";
+  if(P.length)Object.keys(DATA).forEach(k=>{
+    if(P.some(p=>p.busy.has(k)))return;
+    const c=avail(k,P).reduce((a,x)=>a+x[1].length,0);if(!c)return;n+=c;
+    h+=`<div class="day"><h3>${k}<span class="tag">${DATA[k].s}</span></h3>${dayHTML(k,P)}</div>`;
+  });
+  $("list").innerHTML=h||'<div class="empty">🍃 조건에 맞는 산이 없어요</div>';
+  $("count").textContent=n+"개";
+  // 다녀온 산
+  const v=[];
+  ids.forEach(id=>[...O[id].vis].forEach(k=>{
+    const me=(shared?id===uid:true);
+    v.push(me?`<button class="chip vis" data-unvis="${esc(k)}">${esc(nameOf(id))} · ${esc(k)} ✕</button>`:`<span class="chip vis plain">${esc(nameOf(id))} · ${esc(k)}</span>`);
+  }));
+  $("visited").innerHTML=v.join("")||'<div class="empty">아직 없어요</div>';
+}
+
+// ---- 저장 ----
+function touch(){
+  touched=true;dirty=true;clearTimeout(timer);timer=setTimeout(flush,500);render();
+}
+async function flush(){
+  if(!shared){try{localStorage.setItem(LK,JSON.stringify({busy:[...mine.busy],vis:[...mine.vis]}))}catch(e){}dirty=false;return}
+  if(inflight){timer=setTimeout(flush,300);return}
+  inflight=true;dirty=false;
+  try{await db.doc("members/"+uid).set({busy:[...mine.busy],vis:[...mine.vis]})}
+  catch(e){toast("저장하지 못했어요. 이 링크에서 편집할 수 있는 권한(기여자)이 필요해요")}
+  inflight=false;
+  if(dirty)flush();else render();
+}
+
+// ---- 이벤트 ----
+document.addEventListener("click",e=>{
+  const t=e.target.closest("[data-tab],[data-sub],[data-busy],[data-day],[data-vis],[data-unvis],[data-dep],[data-join],[data-kick]");
+  if(!t)return;const d=t.dataset;
+  if(d.tab){tab=d.tab;window.scrollTo(0,0)}
+  else if(d.sub)sub=d.sub;
+  else if(d.busy){mine.busy.has(d.busy)?mine.busy.delete(d.busy):mine.busy.add(d.busy);touch();return}
+  else if(d.day)sel=d.day;
+  else if(d.vis){mine.vis.add(d.vis);toast(d.vis+" 추가! 목록에서 빠져요");touch();return}
+  else if(d.unvis){mine.vis.delete(d.unvis);touch();return}
+  else if(d.dep){dep.has(d.dep)?dep.delete(d.dep):dep.add(d.dep)}
+  else if(d.join){touch();return}
+  else if(d.kick){
+    db.doc("members/"+d.kick).delete().catch(()=>toast("내보내지 못했어요"));
+    return;
+  }
+  render();
+});
+$("nomubak").onchange=e=>{nm=e.target.checked;render()};
+
+// ---- 연결 ----
+render();
+(async function connect(){
+  if(!(window.claude&&claude.use))return;
+  try{
+    user=await claude.use("user");db=await claude.use("db");
+    if(!user||!db)return;
+    uid=await user.id();isOwner=await user.isOwner();
+    if(!uid)return;
+  }catch(e){return}
+  shared=true;
+  // 이 기기에만 저장돼 있던 값이 있으면 그대로 내 데이터로 이어받는다
+  const lt=setTimeout(()=>{if(!loaded){slow=true;render()}},10000);
+  render();
+  db.collection("members").onSnapshot(snap=>{
+    const m={};snap.docs.forEach(d=>{m[d.id]=d.data()||{}});
+    members=m;joined=!!m[uid];
+    if(joined&&!dirty&&!inflight){mine={busy:new Set(m[uid].busy||[]),vis:new Set(m[uid].vis||[])}}
+    if(!joined&&touched&&!dirty&&!inflight){dirty=true;flush()} // 로컬 입력을 처음 공유로 올림
+    if(!snap.metadata.fromCache){loaded=true;clearTimeout(lt)}
+    render();
+    user.profiles(Object.keys(m)).then(ps=>{
+      let ch=false;Object.keys(ps).forEach(id=>{const n=ps[id].name||"";if(names[id]!==n){names[id]=n;ch=true}});
+      if(ch)render();
+    });
+  },()=>{connErr=true;clearTimeout(lt);render()});
+})();
+})();
+</script>
