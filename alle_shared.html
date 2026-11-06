@@ -1,4 +1,4 @@
-<title>산친구 캘린더</title>
+<title>등산조아 캘린더</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,7 +28,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--leaf);outline-o
 .wrap{max-width:640px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 
 .hero{background:linear-gradient(var(--sky),var(--bg));padding-top:14px}
-.hero svg{display:block;width:100%;height:auto;max-height:140px}
+.hero svg{display:block;width:100%;max-width:640px;height:auto;margin:0 auto}
 .hero h1{font-size:24px;margin:0;font-weight:400;text-wrap:balance}
 .hero p{margin:2px 0 10px;color:var(--mute);font-size:13px}
 .status{font-size:12px;color:var(--mute);padding:8px 0;border-bottom:2px dashed var(--line)}
@@ -84,10 +84,10 @@ section{display:none}section.on{display:block}
 
 <div class="hero">
   <div class="wrap">
-    <h1>⛰️ 산친구 캘린더</h1>
+    <h1>⛰️ 등산조아 캘린더</h1>
     <p>각자 일정을 입력하면, 다 같이 갈 수 있는 날과 산이 모여요</p>
   </div>
-  <svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+  <svg viewBox="0 0 400 110" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
     <circle cx="330" cy="34" r="18" fill="#f4ac5b"/>
     <path d="M-10 110 L70 30 Q80 20 90 30 L150 90 L170 110Z" fill="#8cc79a"/>
     <path d="M70 30 Q80 20 90 30 L96 36 Q84 42 78 36 Q72 42 62 38Z" fill="#fff"/>
@@ -135,6 +135,7 @@ section{display:none}section.on{display:block}
 <section id="tab-list">
   <div class="card">
     <h2>🧭 찾는 조건</h2>
+    <div class="chips" id="wkchips" style="margin-bottom:8px"></div>
     <div class="chips" id="deps"></div>
     <label class="switch"><input type="checkbox" id="nomubak"> 무박은 빼주세요</label>
     <label class="switch"><input type="checkbox" id="bacchk"> ⭐ 100대 명산만 볼래요</label>
@@ -210,7 +211,7 @@ let db=null,user=null,uid=null,shared=false,isOwner=false,loaded=false,slow=fals
 let members={},names={};                    // 공유 데이터: id -> {busy,vis}, id -> 이름
 let mine={busy:new Set(),vis:new Set()};     // 내 데이터(편집 중 값)
 let touched=false,joined=false,dirty=false,inflight=false,timer=null;
-let tab="cal",sub="view",sel=null,nm=false,bacOnly=false;const dep=new Set(["사당"]);
+let tab="cal",sub="view",sel=null,nm=false,bacOnly=false,wk="we";const dep=new Set(["사당"]);
 const LK="mtn-shared-local-v1";
 try{const s=JSON.parse(localStorage.getItem(LK)||"null");if(s){mine={busy:new Set(s.busy||[]),vis:new Set(s.vis||[])};touched=true}}catch(e){}
 
@@ -237,6 +238,8 @@ function nameOf(id){
 }
 function avail(k,P){
   const out=[];
+  const wd=(k.match(/\((.)\)/)||[])[1],we=wd==="토"||wd==="일";
+  if((wk==="we"&&!we)||(wk==="wd"&&we))return out;
   DEPS.filter(x=>dep.has(x)&&DATA[k].d[x]).forEach(x=>{
     const l=DATA[k].d[x].filter(t=>!(nm&&t.includes("[무박]"))&&!P.some(p=>vh(p,base(t)))&&(!bacOnly||isBAC(t)));
     if(l.length)out.push([x,l]);
@@ -296,6 +299,7 @@ function render(){
   // 산 목록
   $("deps").innerHTML=DEPS.map(x=>`<button class="chip${dep.has(x)?" on":""}" data-dep="${x}">${x}</button>`).join("");
   $("nomubak").checked=nm;$("bacchk").checked=bacOnly;
+  $("wkchips").innerHTML=[["all","전체 요일"],["we","주말 (토·일)"],["wd","평일 (월~금)"]].map(([v,l])=>`<button class="chip${wk===v?" on":""}" data-wk="${v}">${l}</button>`).join("");
   let n=0,h="";
   if(P.length)Object.keys(DATA).forEach(k=>{
     if(P.some(p=>p.busy.has(k)))return;
@@ -329,7 +333,7 @@ async function flush(){
 
 // ---- 이벤트 ----
 document.addEventListener("click",e=>{
-  const t=e.target.closest("[data-tab],[data-sub],[data-busy],[data-day],[data-vis],[data-unvis],[data-dep],[data-join],[data-kick]");
+  const t=e.target.closest("[data-tab],[data-sub],[data-busy],[data-day],[data-vis],[data-unvis],[data-dep],[data-wk],[data-join],[data-kick]");
   if(!t)return;const d=t.dataset;
   if(d.tab){tab=d.tab;window.scrollTo(0,0)}
   else if(d.sub)sub=d.sub;
@@ -338,6 +342,7 @@ document.addEventListener("click",e=>{
   else if(d.vis){mine.vis.add(d.vis);toast(d.vis+" 추가! 목록에서 빠져요");touch();return}
   else if(d.unvis){mine.vis.delete(d.unvis);touch();return}
   else if(d.dep){dep.has(d.dep)?dep.delete(d.dep):dep.add(d.dep)}
+  else if(d.wk)wk=d.wk;
   else if(d.join){touch();return}
   else if(d.kick){
     db.doc("members/"+d.kick).delete().catch(()=>toast("내보내지 못했어요"));
