@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>산행 일정 비교 목업</title>
+<style>
+:root{--bg:#f6f7f5;--card:#fff;--ink:#1d2b22;--mute:#6b7a70;--line:#dde3de;--ok:#2f7d4f;--busy:#c2503f;--busybg:#fbeae7;--okbg:#e6f3ea}
+@media (prefers-color-scheme:dark){:root{--bg:#141a16;--card:#1d2620;--ink:#e6efe8;--mute:#93a39a;--line:#2d3a31;--ok:#6fcf93;--busy:#ee8b7b;--busybg:#3a2420;--okbg:#1f3427}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,"Malgun Gothic",sans-serif;padding:16px;max-width:900px;margin-inline:auto}
+h1{font-size:20px;margin:4px 0}
+.note{color:var(--mute);font-size:13px;margin:0 0 14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+h2{font-size:15px;margin:0 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 11px;border-radius:999px;cursor:pointer;font:inherit}
+.chip.on{background:var(--ok);color:#fff;border-color:var(--ok)}
+.chip.busy{background:var(--busybg);color:var(--busy);border-color:var(--busy);text-decoration:line-through}
+.day{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--okbg)}
+.day h3{font-size:14px;margin:0 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{font-size:11px;padding:1px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mute);background:var(--card)}
+.row{display:flex;gap:8px;margin:3px 0;font-size:14px}
+.row b{min-width:44px;color:var(--mute);font-weight:600}
+.empty{color:var(--mute);font-size:14px}
+.m{border:0;background:none;color:inherit;font:inherit;padding:0 2px;cursor:pointer;border-bottom:1px dotted var(--mute)}
+.m:hover{color:var(--busy)}
+.mon{margin-bottom:16px}
+.mon h3{font-size:14px;margin:0 0 6px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.dow{font-size:11px;color:var(--mute);text-align:center}
+.cell{min-height:58px;border:1px solid var(--line);border-radius:8px;padding:3px 4px;font-size:11px;line-height:1.3;color:var(--mute);overflow:hidden}
+.cell b{display:block;font-size:12px;color:var(--ink)}
+.cell.ok{background:var(--okbg);border-color:var(--ok);color:var(--ok)}
+.cell.no{background:var(--busybg);border-color:var(--busy);color:var(--busy)}
+.cell.nd{opacity:.45}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-bottom:10px}
+.chip.vis{background:var(--busybg);color:var(--busy);border-color:var(--busy)}
+</style>
+</head>
+<body>
+<h1>산행 일정 비교 (목업)</h1>
+<p class="note">샘플 데이터입니다. 알레 일정은 일부만 담았고, 내 일정(바쁜 날)은 가짜예요. 날짜를 누르면 바쁜 날로 바뀌어요.</p>
+
+<div class="card">
+  <h2>인원 (누르면 그 사람 일정을 편집)</h2>
+  <div class="chips" id="people"></div>
+  <form id="addf" style="display:flex;gap:6px;margin-top:8px">
+    <input id="newname" placeholder="친구 이름" style="flex:1;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);font:inherit">
+    <button class="chip on" type="submit">추가</button>
+  </form>
+  <p class="note" style="margin:8px 0 0">결과는 모든 인원이 가능한 날만 보여주고, 누구든 다녀온 산은 제외해요.</p>
+</div>
+
+<div class="card">
+  <h2 id="dayhead">일정 (누르면 바쁜 날 토글)</h2>
+  <div class="chips" id="days"></div>
+</div>
+
+<div class="card">
+  <h2>출발지</h2>
+  <div class="chips" id="deps"></div>
+  <div style="height:8px"></div>
+  <label><input type="checkbox" id="nomubak"> 무박 제외</label>
+</div>
+
+<div class="card">
+  <h2>다녀온 산 (누구든 다녀왔으면 제외 · 누르면 복구)</h2>
+  <div class="chips" id="visited"></div>
+  <p class="note" style="margin:8px 0 0">아래 목록에서 산 이름을 누르면 선택된 사람의 다녀온 산으로 추가돼요. 코스가 달라도 같은 산이면 함께 제외돼요.</p>
+</div>
+
+<div class="card">
+  <h2>가능한 산 <span class="tag" id="count"></span></h2>
+  <div id="out"></div>
+</div>
+
+<div class="card">
+  <h2>달력 요약 (전원 가능한 날)</h2>
+  <div class="legend"><span style="color:var(--ok)">■ 전원 가능 (갈 수 있는 산 수)</span></div>
+  <div id="cal"></div>
+</div>
+
+<script>
+const DATA={
+"11/07 (토)":{s:"예약 중",d:{사당:["[새벽출발] 설악산 (오색-대청봉)","[새벽출발] 주왕산","덕유산 (안성-향적봉)","무등산","가야산"],송내:["내장산","조계산","월류봉 둘레길"],부산:["월출산","강천산","주왕산"]}},
+"11/08 (일)":{s:"예약 중",d:{사당:["내변산","두타산 (베틀바위)","경주 남산","대둔산","청량산"],송내:["주왕산","내장산"],부산:["청량산","속리산"]}},
+"11/14 (토)":{s:"예약 중",d:{사당:["[새벽출발] 설악산 (오색-대청봉)","민둥산","팔공산","소백산","마이산","금오산"],송내:["마이산","가야산"],부산:["두륜산","축령산 (치유의 숲)"]}},
+"11/15 (일)":{s:"예약 중",d:{사당:["[새벽출발] 팔영산","마니산","운악산","모악산","청량산","대둔산"],송내:["속리산","금오산"],대전:["청량산"]}},
+"11/20 (금)":{s:"예약 중",d:{사당:["[무박] 지리산 (백무동-천왕봉-중산리)","[무박] 영남알프스","[무박] 천관산"],광주:["[무박] 태백산"]}},
+"11/21 (토)":{s:"예약 중",d:{사당:["[새벽출발] 달마산+땅끝마을","경주 남산","계룡산","월악산","운장산","내변산"],송내:["팔공산","내변산"],대전:["소백산","월출산"]}},
+"11/22 (일)":{s:"예약 중",d:{사당:["[새벽출발] 무등산 (안양산-백마능선)","선운산","소백산","칠갑산","속리산"],송내:["칠갑산","옥순봉-구담봉+제비봉"]}},
+"11/28 (토)":{s:"오픈 전",d:{사당:["[새벽출발] 월출산","선자령","태백산","청량산","가야산"],송내:["소백산","운악산"],부산:["지리산 바래봉","팔영산"]}},
+"11/29 (일)":{s:"오픈 전",d:{사당:["[새벽출발] 소백산 (죽령-비로봉)","선운산","속리산","무등산"],송내:["칠갑산"]}},
+"12/05 (토)":{s:"오픈 전",d:{사당:["태백산","소백산","선자령","월악산","[무박] 영남알프스 (가지-운문)"],송내:["선자령","민주지산"],부산:["태백산","무등산"]}},
+"12/06 (일)":{s:"오픈 전",d:{사당:["태백산","계룡산","산막이옛길","소백산"],송내:["백덕산","축령산"],부산:["월출산","지리산 바래봉"]}}
+};
+const DEPS=["사당","송내","부산","대전","광주"];
+// 가짜 인원 데이터
+const people=[
+  {n:"나",busy:new Set(["11/14 (토)","11/22 (일)","11/28 (토)"]),vis:new Set(["설악산","내장산"])},
+  {n:"친구A",busy:new Set(["11/15 (일)","11/21 (토)"]),vis:new Set(["소백산"])}
+];
+let cur=0;
+let dep=new Set(["사당"]);
+const base=t=>t.replace(/\[[^\]]*\]\s*/g,"").replace(/\(.*?\)/g,"").split("+")[0].trim();
+const $=id=>document.getElementById(id);
+function render(){
+  const P=people[cur];
+  $("people").innerHTML="";
+  people.forEach((p,i)=>{
+    const b=document.createElement("button");
+    b.className="chip"+(i===cur?" on":"");b.textContent=p.n;
+    b.onclick=()=>{cur=i;render()};
+    $("people").appendChild(b);
+    if(people.length>1){
+      const x=document.createElement("button");
+      x.className="chip";x.textContent="✕";x.title=p.n+" 삭제";
+      x.onclick=()=>{people.splice(i,1);cur=Math.min(cur,people.length-1);render()};
+      $("people").appendChild(x);
+    }
+  });
+  $("dayhead").textContent=P.n+"의 일정 (누르면 바쁜 날 토글)";
+  $("days").innerHTML="";
+  Object.keys(DATA).forEach(k=>{
+    const b=document.createElement("button");
+    b.className="chip"+(P.busy.has(k)?" busy":"");b.textContent=k;
+    b.onclick=()=>{P.busy.has(k)?P.busy.delete(k):P.busy.add(k);render()};
+    $("days").appendChild(b);
+  });
+  $("deps").innerHTML="";
+  DEPS.forEach(k=>{
+    const b=document.createElement("button");
+    b.className="chip"+(dep.has(k)?" on":"");b.textContent=k;
+    b.onclick=()=>{dep.has(k)?dep.delete(k):dep.add(k);render()};
+    $("deps").appendChild(b);
+  });
+  const nm=$("nomubak").checked;let n=0,html="";
+  Object.entries(DATA).forEach(([k,v])=>{
+    if(people.some(p=>p.busy.has(k)))return;
+    let rows="";
+    DEPS.filter(x=>dep.has(x)&&v.d[x]).forEach(x=>{
+      const m=v.d[x].filter(t=>!(nm&&t.includes("[무박]"))&&!people.some(p=>p.vis.has(base(t))));
+      if(m.length){n+=m.length;rows+=`<div class="row"><b>${x}</b><span>${m.map(t=>`<button class="m" data-b="${base(t)}">${t}</button>`).join(" · ")}</span></div>`}
+    });
+    if(rows)html+=`<div class="day"><h3>${k}<span class="tag">${v.s}</span></h3>${rows}</div>`;
+  });
+  $("out").innerHTML=html||'<p class="empty">조건에 맞는 산이 없어요.</p>';
+  $("count").textContent=n+"개";
+  $("visited").innerHTML="";
+  if(!people.some(p=>p.vis.size))$("visited").innerHTML='<span class="empty">아직 없어요.</span>';
+  people.forEach(p=>[...p.vis].forEach(k=>{
+    const b=document.createElement("button");
+    b.className="chip vis";b.textContent=p.n+" · "+k+" ✕";
+    b.onclick=()=>{p.vis.delete(k);render()};
+    $("visited").appendChild(b);
+  }));
+  cal();
+}
+function cal(){
+  const nm=$("nomubak").checked;let h="";
+  [[11,30],[12,31]].forEach(([mo,last])=>{
+    h+=`<div class="mon"><h3>2026년 ${mo}월</h3><div class="grid">`+"일월화수목금토".split("").map(d=>`<div class="dow">${d}</div>`).join("");
+    const first=new Date(2026,mo-1,1).getDay();
+    for(let i=0;i<first;i++)h+="<div></div>";
+    for(let d=1;d<=last;d++){
+      const key=Object.keys(DATA).find(k=>{const [m,dd]=k.split(" ")[0].split("/").map(Number);return m===mo&&dd===d});
+      if(!key){h+=`<div class="cell nd"><b>${d}</b></div>`;continue}
+      const who=people.filter(p=>p.busy.has(key)).map(p=>p.n);
+      if(who.length){h+=`<div class="cell nd"><b>${d}</b></div>`;continue}
+      let n=0;DEPS.filter(x=>dep.has(x)&&DATA[key].d[x]).forEach(x=>{n+=DATA[key].d[x].filter(t=>!(nm&&t.includes("[무박]"))&&!people.some(p=>p.vis.has(base(t)))).length});
+      h+=`<div class="cell ok"><b>${d}</b>전원 가능<br>산 ${n}개</div>`;
+    }
+    h+="</div></div>";
+  });
+  $("cal").innerHTML=h;
+}
+$("out").onclick=e=>{const b=e.target.closest(".m");if(b){people[cur].vis.add(b.dataset.b);render()}};
+$("addf").onsubmit=e=>{e.preventDefault();const v=$("newname").value.trim();if(!v)return;people.push({n:v,busy:new Set(),vis:new Set()});cur=people.length-1;$("newname").value="";render()};
+$("nomubak").onchange=render;render();
+</script>
+</body>
+</html>
